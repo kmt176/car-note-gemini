@@ -1,0 +1,1543 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>モビログ - 車両給油・メンテナンス管理</title>
+  
+  <!-- iPhone / PWA ホーム画面追加対応 -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="モビログ">
+  <meta name="theme-color" content="#0f172a">
+  <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3202/3202926.png">
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700;800&family=Outfit:wght@500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Noto Sans JP"', 'sans-serif'],
+            outfit: ['"Outfit"', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              50: '#f0fdf4',
+              100: '#dcfce7',
+              500: '#22c55e',
+              600: '#16a34a',
+              700: '#15803d',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- React 18 & Babel -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <style>
+    /* iOSセーフエリア対応 (ノッチ・ホームバー) */
+    body {
+      padding-top: env(safe-area-inset-top);
+      padding-bottom: env(safe-area-inset-bottom);
+      padding-left: env(safe-area-inset-left);
+      padding-right: env(safe-area-inset-right);
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+    input, textarea, select {
+      user-select: auto;
+    }
+    .number-font {
+      font-family: 'Outfit', sans-serif;
+    }
+  </style>
+</head>
+<body class="bg-slate-100 text-slate-800 min-h-screen">
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useMemo, useRef } = React;
+
+    // --- アイコン (SVG) ---
+    const Icon = ({ name, className = "w-5 h-5" }) => {
+      const icons = {
+        fuel: <path d="M3 22V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v17M15 10h2a2 2 0 0 1 2 2v2a2 2 0 0 0 2 2h0a2 2 0 0 0 2-2V7.5L20 5M3 22h12M7 10h4" />,
+        camera: <><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></>,
+        car: <path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.5 2.7C1.4 11.2 1 12 1 13v3c0 .6.4 1 1 1h2m15 0a2 2 0 1 1-4 0m4 0h-7m-4 0a2 2 0 1 1-4 0m4 0H4" />,
+        bike: <><circle cx="5.5" cy="17.5" r="3.5"/><circle cx="18.5" cy="17.5" r="3.5"/><path d="M15 6a1 1 0 1 0 0-2 1 1 0 0 0 0 2zm-3 11.5L9 11l3-4h3l3 4.5"/><path d="M19 17.5h-4l-3-6.5"/></>,
+        gauge: <><path d="m12 14 4-4"/><path d="M3.34 19a10 10 0 1 1 17.32 0"/></>,
+        plus: <><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></>,
+        trash: <><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></>,
+        alert: <><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></>,
+        check: <><polyline points="20 6 9 17 4 12"/></>,
+        settings: <><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></>,
+        user: <><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></>,
+        shield: <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>,
+        chevronRight: <polyline points="9 18 15 12 9 6"/>,
+        refresh: <><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></>,
+        image: <><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></>,
+        close: <><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></>
+      };
+      return (
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+          {icons[name] || null}
+        </svg>
+      );
+    };
+
+    // デフォルトのGoogle Apps Script Web App URL
+    const DEFAULT_GAS_URL = "https://script.google.com/macros/s/AKfycbwFdIyA20FCw46Fkft_0I0LUYJ7JEP_Az-gmxNPgoLw7jLbbK-HJzGNn7p0EsS2erHo/exec";
+
+    // --- メインコンポーネント ---
+    function App() {
+      // GAS Web App URL の保持 (未設定時はデフォルトURLを使用)
+      const [gasUrl, setGasUrl] = useState(() => {
+        return localStorage.getItem("mobillog_gas_url") || DEFAULT_GAS_URL;
+      });
+
+      // 認証状態
+      const [auth, setAuth] = useState(() => {
+        const saved = localStorage.getItem("mobillog_auth_v1");
+        return saved ? JSON.parse(saved) : null;
+      });
+
+      // 画面状態
+      const [tab, setTab] = useState("fuel"); // 'fuel' | 'vehicles' | 'admin' | 'settings'
+      const [loading, setLoading] = useState(false);
+      const [vehicles, setVehicles] = useState([]);
+      const [currentVehicleId, setCurrentVehicleId] = useState("");
+      const [fuelRecords, setFuelRecords] = useState([]);
+      const [fuelSummary, setFuelSummary] = useState(null);
+
+      // モーダル
+      const [showFuelModal, setShowFuelModal] = useState(false);
+      const [showVehicleModal, setShowVehicleModal] = useState(false);
+      const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
+      const [previewReceiptUrl, setPreviewReceiptUrl] = useState(null);
+
+      // GAS API 呼び出しラッパー
+      const callApi = async (action, payload = {}) => {
+        if (!gasUrl) {
+          throw new Error("Google Apps ScriptのウェブアプリURLが設定されていません。設定画面で入力してください。");
+        }
+        const body = {
+          action: action,
+          token: auth ? auth.token : null,
+          user_id: auth ? auth.user.user_id : null,
+          ...payload
+        };
+
+        const res = await fetch(gasUrl, {
+          method: "POST",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify(body)
+        });
+        const json = await res.json();
+        if (!json.success && json.error) {
+          throw new Error(json.error);
+        }
+        return json;
+      };
+
+      // ログイン永続化
+      const saveAuth = (authData) => {
+        setAuth(authData);
+        localStorage.setItem("mobillog_auth_v1", JSON.stringify(authData));
+        if (authData?.user?.must_change_password) {
+          setShowChangePasswordModal(true);
+        }
+      };
+
+      const handleLogout = () => {
+        if (confirm("ログアウトしますか？")) {
+          setAuth(null);
+          localStorage.removeItem("mobillog_auth_v1");
+        }
+      };
+
+      // 車両＆給油データの取得
+      const fetchData = async () => {
+        if (!auth || !gasUrl) return;
+        setLoading(true);
+        try {
+          // 車両一覧
+          const vehRes = await callApi("getVehicles");
+          setVehicles(vehRes.vehicles || []);
+          
+          let selectedId = currentVehicleId;
+          if ((!selectedId || !vehRes.vehicles.some(v => v.vehicle_id === selectedId)) && vehRes.vehicles.length > 0) {
+            selectedId = vehRes.vehicles[0].vehicle_id;
+            setCurrentVehicleId(selectedId);
+          }
+
+          // 給油一覧
+          if (selectedId) {
+            const fuelRes = await callApi("getFuelRecords", { vehicle_id: selectedId });
+            setFuelRecords(fuelRes.records || []);
+            setFuelSummary(fuelRes.summary || null);
+          } else {
+            setFuelRecords([]);
+            setFuelSummary(null);
+          }
+        } catch (err) {
+          alert("データ取得エラー: " + err.message);
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      useEffect(() => {
+        if (auth && gasUrl) {
+          fetchData();
+        }
+      }, [auth, gasUrl, currentVehicleId]);
+
+      // 現在選択中の車両
+      const currentVehicle = useMemo(() => {
+        return vehicles.find(v => v.vehicle_id === currentVehicleId) || null;
+      }, [vehicles, currentVehicleId]);
+
+      // 車種別の登録台数と上限（車: 最大3台、バイク: 最大2台）
+      const vehicleCounts = useMemo(() => {
+        const carCount = vehicles.filter(v => v.vehicle_type !== "bike").length;
+        const bikeCount = vehicles.filter(v => v.vehicle_type === "bike").length;
+        return {
+          car: carCount,
+          bike: bikeCount,
+          canAddCar: carCount < 3,
+          canAddBike: bikeCount < 2,
+          canAddAny: carCount < 3 || bikeCount < 2
+        };
+      }, [vehicles]);
+
+      // --- ログイン画面 ---
+      if (!auth) {
+        return (
+          <LoginView
+            gasUrl={gasUrl}
+            onSaveGasUrl={(url) => {
+              setGasUrl(url);
+              localStorage.setItem("mobillog_gas_url", url);
+            }}
+            onLoginSuccess={saveAuth}
+          />
+        );
+      }
+
+      return (
+        <div className="flex flex-col min-h-screen bg-slate-100 max-w-lg mx-auto pb-20 shadow-xl border-x border-slate-200">
+          {/* ヘッダー */}
+          <header className="bg-slate-900 text-white p-4 sticky top-0 z-30 shadow-md">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 bg-emerald-500 rounded-xl text-slate-950 font-bold">
+                  <Icon name="fuel" className="w-5 h-5" />
+                </div>
+                <div>
+                  <h1 className="text-base font-bold tracking-tight">モビログ <span className="text-[10px] text-emerald-400 bg-emerald-950 px-2 py-0.5 rounded-full border border-emerald-800">身内共有版</span></h1>
+                  <p className="text-[11px] text-slate-400">{auth.user.user_name} さん ({auth.user.user_id})</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={fetchData}
+                  disabled={loading}
+                  title="更新"
+                  className="p-2 rounded-lg bg-slate-800 text-slate-300 hover:text-white"
+                >
+                  <Icon name="refresh" className={`w-4 h-4 ${loading ? "animate-spin text-emerald-400" : ""}`} />
+                </button>
+                <button
+                  onClick={() => setTab("settings")}
+                  className="p-2 rounded-lg bg-slate-800 text-slate-300 hover:text-white"
+                >
+                  <Icon name="settings" className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            {/* 車両セレクター */}
+            <div className="mt-3 pt-3 border-t border-slate-800 flex items-center justify-between gap-2">
+              <div className="flex-1">
+                {vehicles.length > 0 ? (
+                  <select
+                    value={currentVehicleId}
+                    onChange={e => setCurrentVehicleId(e.target.value)}
+                    className="w-full bg-slate-800 text-white text-xs font-semibold rounded-xl px-3 py-2 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-400"
+                  >
+                    {vehicles.map(v => (
+                      <option key={v.vehicle_id} value={v.vehicle_id}>
+                        {v.vehicle_type === "bike" ? "🏍️ " : "🚗 "}
+                        {v.vehicle_name} ({v.plate_number || "未登録"})
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <span className="text-xs text-amber-400">車両が登録されていません</span>
+                )}
+              </div>
+              <button
+                onClick={() => setShowVehicleModal(true)}
+                disabled={!vehicleCounts.canAddAny}
+                className={`px-3 py-2 text-xs font-bold rounded-xl flex items-center gap-1 border transition ${
+                  vehicleCounts.canAddAny
+                    ? "bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700"
+                    : "bg-slate-800/40 text-slate-500 border-slate-800 cursor-not-allowed"
+                }`}
+                title={vehicleCounts.canAddAny ? "車両を追加" : "登録枠（車3台・バイク2台）が満杯です"}
+              >
+                <Icon name="plus" className="w-3.5 h-3.5" /> 追加
+              </button>
+            </div>
+          </header>
+
+          {/* メインビュー */}
+          <main className="flex-1 p-4 space-y-4">
+            {tab === "fuel" && (
+              <FuelTab
+                vehicle={currentVehicle}
+                records={fuelRecords}
+                summary={fuelSummary}
+                onOpenAddFuel={() => setShowFuelModal(true)}
+                onDeleteRecord={async (id) => {
+                  if (!confirm("この給油記録を削除しますか？")) return;
+                  setLoading(true);
+                  try {
+                    await callApi("deleteFuelRecord", { record_id: id });
+                    await fetchData();
+                  } catch (e) {
+                    alert(e.message);
+                  } finally {
+                    setLoading(false);
+                  }
+                }}
+                onPreviewReceipt={(url) => setPreviewReceiptUrl(url)}
+              />
+            )}
+
+            {tab === "vehicles" && (
+              <VehiclesTab
+                vehicles={vehicles}
+                vehicleCounts={vehicleCounts}
+                onAddNew={() => setShowVehicleModal(true)}
+                onDelete={async (id) => {
+                  if (!confirm("この車両を削除しますか？関連する給油記録も閲覧できなくなります。")) return;
+                  setLoading(true);
+                  try {
+                    await callApi("deleteVehicle", { vehicle_id: id });
+                    await fetchData();
+                  } catch (e) {
+                    alert(e.message);
+                  } finally {
+                    setLoading(false);
+                  }
+                }}
+              />
+            )}
+
+            {tab === "admin" && auth.user.is_admin && (
+              <AdminTab callApi={callApi} />
+            )}
+
+            {tab === "settings" && (
+              <SettingsTab
+                auth={auth}
+                gasUrl={gasUrl}
+                onSaveGasUrl={(url) => {
+                  setGasUrl(url);
+                  localStorage.setItem("mobillog_gas_url", url);
+                  alert("URLを保存しました。");
+                }}
+                onChangePassword={() => setShowChangePasswordModal(true)}
+                onLogout={handleLogout}
+              />
+            )}
+          </main>
+
+          {/* ボトムナビゲーション (iOS アプリ風) */}
+          <nav className="fixed bottom-0 left-0 right-0 max-w-lg mx-auto bg-white/95 backdrop-blur border-t border-slate-200 z-30 flex justify-around items-center py-2 px-1">
+            <button
+              onClick={() => setTab("fuel")}
+              className={`flex flex-col items-center gap-1 text-[10px] font-bold py-1 px-3 rounded-lg transition ${tab === "fuel" ? "text-emerald-600" : "text-slate-400"}`}
+            >
+              <Icon name="fuel" className="w-5 h-5" />
+              給油記録
+            </button>
+            <button
+              onClick={() => setTab("vehicles")}
+              className={`flex flex-col items-center gap-1 text-[10px] font-bold py-1 px-3 rounded-lg transition ${tab === "vehicles" ? "text-emerald-600" : "text-slate-400"}`}
+            >
+              <Icon name="car" className="w-5 h-5" />
+              登録車両
+            </button>
+            {auth.user.is_admin && (
+              <button
+                onClick={() => setTab("admin")}
+                className={`flex flex-col items-center gap-1 text-[10px] font-bold py-1 px-3 rounded-lg transition ${tab === "admin" ? "text-emerald-600" : "text-slate-400"}`}
+              >
+                <Icon name="shield" className="w-5 h-5" />
+                管理者
+              </button>
+            )}
+            <button
+              onClick={() => setTab("settings")}
+              className={`flex flex-col items-center gap-1 text-[10px] font-bold py-1 px-3 rounded-lg transition ${tab === "settings" ? "text-emerald-600" : "text-slate-400"}`}
+            >
+              <Icon name="settings" className="w-5 h-5" />
+              設定
+            </button>
+          </nav>
+
+          {/* 給油登録モーダル */}
+          {showFuelModal && currentVehicle && (
+            <AddFuelModal
+              vehicle={currentVehicle}
+              lastRecord={fuelRecords[0] || null}
+              callApi={callApi}
+              onClose={() => setShowFuelModal(false)}
+              onSuccess={async () => {
+                setShowFuelModal(false);
+                await fetchData();
+              }}
+            />
+          )}
+
+          {/* 車両登録モーダル */}
+          {showVehicleModal && (
+            <AddVehicleModal
+              vehicleCounts={vehicleCounts}
+              callApi={callApi}
+              onClose={() => setShowVehicleModal(false)}
+              onSuccess={async () => {
+                setShowVehicleModal(false);
+                await fetchData();
+              }}
+            />
+          )}
+
+          {/* パスワード変更モーダル */}
+          {showChangePasswordModal && (
+            <ChangePasswordModal
+              user={auth.user}
+              isMandatory={auth.user.must_change_password}
+              callApi={callApi}
+              onSuccess={(newToken, updatedUser) => {
+                saveAuth({ token: newToken, user: updatedUser });
+                setShowChangePasswordModal(false);
+                alert("パスワードを変更しました！");
+              }}
+              onClose={() => {
+                if (!auth.user.must_change_password) {
+                  setShowChangePasswordModal(false);
+                }
+              }}
+            />
+          )}
+
+          {/* レシート画像プレビューモーダル */}
+          {previewReceiptUrl && (
+            <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4 backdrop-blur-sm" onClick={() => setPreviewReceiptUrl(null)}>
+              <div className="relative max-w-sm w-full bg-slate-900 rounded-2xl overflow-hidden shadow-2xl" onClick={e => e.stopPropagation()}>
+                <button onClick={() => setPreviewReceiptUrl(null)} className="absolute top-3 right-3 p-1.5 bg-black/60 text-white rounded-full">
+                  <Icon name="close" className="w-5 h-5" />
+                </button>
+                <div className="p-4 text-center">
+                  <p className="text-xs text-slate-300 font-semibold mb-2">保存された給油レシート</p>
+                  <iframe src={previewReceiptUrl} className="w-full h-96 border-0 rounded-xl bg-white" title="Receipt"></iframe>
+                  <a href={previewReceiptUrl} target="_blank" rel="noopener noreferrer" className="mt-3 inline-block text-xs font-bold text-emerald-400 underline">
+                    Googleドライブで直接開く
+                  </a>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // ==========================================
+    // 画面: 給油タブ（メイン機能）
+    // ==========================================
+    function FuelTab({ vehicle, records, summary, onOpenAddFuel, onDeleteRecord, onPreviewReceipt }) {
+      if (!vehicle) {
+        return (
+          <div className="bg-white rounded-2xl p-8 text-center border border-slate-200">
+            <Icon name="car" className="w-12 h-12 text-slate-300 mx-auto mb-2" />
+            <p className="text-sm font-bold text-slate-700">車両が選択されていません</p>
+            <p className="text-xs text-slate-400 mt-1">上部の「車両追加」から愛車を登録してください。</p>
+          </div>
+        );
+      }
+
+      return (
+        <div className="space-y-4">
+          {/* 燃費サマリーカード */}
+          <div className="bg-gradient-to-br from-slate-900 to-slate-800 text-white rounded-2xl p-4 shadow-md">
+            <div className="flex items-center justify-between text-xs text-slate-400 border-b border-slate-700/60 pb-2 mb-3">
+              <span className="flex items-center gap-1.5 font-bold text-slate-200">
+                <Icon name={vehicle.vehicle_type === "bike" ? "bike" : "car"} className="w-4 h-4 text-emerald-400" />
+                {vehicle.vehicle_name}
+                <span className="text-[10px] text-slate-400 font-normal">({vehicle.vehicle_type === "bike" ? "バイク" : "四輪車"})</span>
+              </span>
+              <span className="font-mono bg-slate-800 px-2 py-0.5 rounded text-[11px] text-slate-300">
+                最新: {Number(vehicle.current_odometer).toLocaleString()} km
+              </span>
+            </div>
+
+            <div className="grid grid-cols-3 gap-2 text-center">
+              <div>
+                <span className="text-[10px] text-slate-400 uppercase font-semibold block">通算平均燃費</span>
+                <div className="text-xl font-bold number-font text-emerald-400 mt-0.5">
+                  {summary?.avgEconomy ? `${summary.avgEconomy}` : "--"}
+                  <span className="text-[10px] text-slate-400 font-normal ml-0.5">km/L</span>
+                </div>
+              </div>
+              <div>
+                <span className="text-[10px] text-slate-400 uppercase font-semibold block">直近燃費</span>
+                <div className="text-xl font-bold number-font text-white mt-0.5">
+                  {summary?.latestEconomy ? `${summary.latestEconomy}` : "--"}
+                  <span className="text-[10px] text-slate-400 font-normal ml-0.5">km/L</span>
+                </div>
+              </div>
+              <div>
+                <span className="text-[10px] text-slate-400 uppercase font-semibold block">1kmガソリン代</span>
+                <div className="text-xl font-bold number-font text-amber-300 mt-0.5">
+                  {summary?.avgCostPerKm ? `¥${summary.avgCostPerKm}` : "--"}
+                  <span className="text-[10px] text-slate-400 font-normal ml-0.5">/km</span>
+                </div>
+              </div>
+            </div>
+
+            {/* 月別合計表示 */}
+            {summary?.monthly && Object.keys(summary.monthly).length > 0 && (
+              <div className="mt-3 pt-3 border-t border-slate-700/60 flex items-center justify-between text-xs text-slate-300">
+                <span className="text-slate-400 text-[11px]">今月の給油合計:</span>
+                <span className="font-bold number-font text-emerald-400">
+                  ¥{Number(Object.values(summary.monthly)[Object.values(summary.monthly).length - 1]?.cost || 0).toLocaleString()}
+                  <span className="text-[10px] text-slate-400 font-normal ml-1">
+                    ({Object.values(summary.monthly)[Object.values(summary.monthly).length - 1]?.fuel || 0} L)
+                  </span>
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* 給油登録ボタン */}
+          <button
+            onClick={onOpenAddFuel}
+            className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm rounded-2xl shadow-lg shadow-emerald-600/30 flex items-center justify-center gap-2 transition active:scale-[0.98]"
+          >
+            <Icon name="camera" className="w-5 h-5" />
+            レシート撮影・給油を記録する
+          </button>
+
+          {/* 履歴リスト */}
+          <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
+            <div className="p-3 border-b border-slate-100 flex items-center justify-between">
+              <h3 className="font-bold text-xs text-slate-700">給油履歴一覧 ({records.length}件)</h3>
+              <span className="text-[10px] text-slate-400">※満タン法で燃費を自動計算</span>
+            </div>
+
+            <div className="divide-y divide-slate-100">
+              {records.map(rec => (
+                <div key={rec.record_id} className="p-3.5 hover:bg-slate-50 transition">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-sm text-slate-900">{rec.date}</span>
+                        {rec.is_full_tank ? (
+                          <span className="text-[9px] bg-emerald-100 text-emerald-700 font-bold px-1.5 py-0.2 rounded">満タン</span>
+                        ) : (
+                          <span className="text-[9px] bg-amber-100 text-amber-700 font-bold px-1.5 py-0.2 rounded">途中給油</span>
+                        )}
+                      </div>
+                      <div className="text-xs text-slate-500 mt-0.5">
+                        <span className="font-mono">{rec.odometer.toLocaleString()} km</span>
+                        {rec.trip_distance && (
+                          <span className="text-slate-400 ml-1.5 font-medium">(+{rec.trip_distance} km)</span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="text-right">
+                      <div className="font-extrabold text-sm text-slate-900 number-font">
+                        ¥{rec.total_amount.toLocaleString()}
+                      </div>
+                      <div className="text-xs text-slate-500">
+                        {rec.fuel_amount} L (@¥{rec.unit_price})
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 燃費表示バー */}
+                  <div className="mt-2 pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
+                    <div>
+                      {rec.fuel_economy ? (
+                        <span className="font-bold text-emerald-600 number-font text-sm">
+                          {rec.fuel_economy} km/L
+                          <span className="text-[10px] text-slate-400 font-normal ml-1.5 font-mono">
+                            (¥{rec.cost_per_km}/km)
+                          </span>
+                        </span>
+                      ) : (
+                        <span className="text-[11px] text-slate-400 italic">
+                          {rec.is_full_tank ? "初回満タン (次回から燃費表示)" : "次回満タン時にまとめて計算"}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      {rec.receipt_file_url && (
+                        <button
+                          onClick={() => onPreviewReceipt(rec.receipt_file_url)}
+                          className="text-[11px] font-semibold text-blue-600 hover:underline flex items-center gap-0.5"
+                        >
+                          <Icon name="image" className="w-3.5 h-3.5" /> レシート
+                        </button>
+                      )}
+                      <button
+                        onClick={() => onDeleteRecord(rec.record_id)}
+                        className="text-slate-400 hover:text-rose-500 p-1"
+                        title="削除"
+                      >
+                        <Icon name="trash" className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+
+                  {rec.memo && (
+                    <div className="mt-1 text-[11px] text-slate-500 bg-slate-50 px-2 py-1 rounded">
+                      {rec.memo}
+                    </div>
+                  )}
+                </div>
+              ))}
+
+              {records.length === 0 && (
+                <div className="p-8 text-center text-xs text-slate-400">
+                  まだ給油記録がありません。「給油を記録する」から登録してください。
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // ==========================================
+    // モーダル: 給油記録登録 (OCR + ミスチェック)
+    // ==========================================
+    function AddFuelModal({ vehicle, lastRecord, callApi, onClose, onSuccess }) {
+      const [form, setForm] = useState({
+        date: new Date().toISOString().split("T")[0],
+        odometer: "",
+        fuel_amount: "",
+        unit_price: "",
+        total_amount: "",
+        is_full_tank: true,
+        memo: ""
+      });
+
+      const [receiptBase64, setReceiptBase64] = useState(null);
+      const [ocrLoading, setOcrLoading] = useState(false);
+      const [ocrMessage, setOcrMessage] = useState(null);
+      const [submitting, setSubmitting] = useState(false);
+
+      const fileInputRef = useRef(null);
+
+      // 前回のオドメーター
+      const prevOdometer = lastRecord ? lastRecord.odometer : (vehicle.current_odometer || 0);
+
+      // レシート写真撮影・アップロード
+      const handleFileChange = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = async (event) => {
+          const base64 = event.target.result;
+          setReceiptBase64(base64);
+          
+          // Googleドライブ OCR 実行
+          setOcrLoading(true);
+          setOcrMessage("Googleドライブでレシートを解析中...");
+          try {
+            const res = await callApi("ocrReceipt", { image_base64: base64 });
+            if (res.success && res.parsed) {
+              const p = res.parsed;
+              setForm(prev => ({
+                ...prev,
+                date: p.date || prev.date,
+                fuel_amount: p.fuel_amount !== null ? p.fuel_amount : prev.fuel_amount,
+                unit_price: p.unit_price !== null ? p.unit_price : prev.unit_price,
+                total_amount: p.total_amount !== null ? p.total_amount : prev.total_amount
+              }));
+              setOcrMessage("✅ レシートから情報を読み取りました！内容をご確認ください。");
+            } else {
+              setOcrMessage("⚠️ 自動読み取りできませんでした。手動で入力してください。");
+            }
+          } catch (err) {
+            setOcrMessage("⚠️ 読み取りエラー: " + err.message);
+          } finally {
+            setOcrLoading(false);
+          }
+        };
+        reader.readAsDataURL(file);
+      };
+
+      // 保存送信（ミスチェック機能付き）
+      const handleSubmit = async (e) => {
+        e.preventDefault();
+
+        const odo = parseInt(form.odometer, 10);
+        const fuelAmt = parseFloat(form.fuel_amount);
+        const total = parseInt(form.total_amount, 10);
+
+        if (isNaN(odo) || isNaN(fuelAmt) || isNaN(total)) {
+          return alert("走行距離、給油量、金額を正しく入力してください。");
+        }
+
+        // --- 距離の入力ミスチェック ---
+        const jumpLimit = vehicle.vehicle_type === "bike" ? 600 : 1500;
+        if (prevOdometer > 0) {
+          if (odo <= prevOdometer) {
+            const ok = confirm(`【入力距離の確認】\n前回の走行距離（${prevOdometer.toLocaleString()} km）以下の数字が入力されています。\n\n入力値: ${odo.toLocaleString()} km\n\n本当にこの距離で記録しますか？`);
+            if (!ok) return;
+          } else if (odo - prevOdometer > jumpLimit) {
+            const ok = confirm(`【走行距離が急増しています】\n前回の走行距離から +${(odo - prevOdometer).toLocaleString()} km 増えています（${vehicle.vehicle_type === "bike" ? "バイク" : "四輪車"}の給油間隔としては長めです）。\n\n前回: ${prevOdometer.toLocaleString()} km\n今回: ${odo.toLocaleString()} km\n\n入力に誤りはありませんか？`);
+            if (!ok) return;
+          }
+        }
+
+        setSubmitting(true);
+        try {
+          await callApi("saveFuelRecord", {
+            record: {
+              vehicle_id: vehicle.vehicle_id,
+              date: form.date,
+              odometer: odo,
+              fuel_amount: fuelAmt,
+              unit_price: parseInt(form.unit_price, 10) || 0,
+              total_amount: total,
+              is_full_tank: form.is_full_tank,
+              memo: form.memo
+            },
+            receipt_base64: receiptBase64
+          });
+          onSuccess();
+        } catch (err) {
+          alert("保存に失敗しました: " + err.message);
+        } finally {
+          setSubmitting(false);
+        }
+      };
+
+      return (
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-end sm:items-center justify-center p-0 sm:p-4 backdrop-blur-sm">
+          <div className="bg-white rounded-t-3xl sm:rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-5 shadow-2xl border border-slate-200">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-3">
+              <h3 className="font-bold text-slate-900 text-sm">給油記録の追加 ({vehicle.vehicle_name})</h3>
+              <button onClick={onClose} className="p-1 text-slate-400 hover:text-slate-600">
+                <Icon name="close" className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* レシート撮影ボタン */}
+            <div className="mb-4">
+              <input
+                type="file"
+                accept="image/*"
+                capture="environment"
+                ref={fileInputRef}
+                onChange={handleFileChange}
+                className="hidden"
+              />
+              <button
+                type="button"
+                onClick={() => fileInputRef.current.click()}
+                disabled={ocrLoading}
+                className="w-full py-3 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow"
+              >
+                <Icon name="camera" className="w-4 h-4 text-emerald-400" />
+                {ocrLoading ? "OCR解析中..." : "レシート写真を撮影して自動入力"}
+              </button>
+              {ocrMessage && (
+                <p className="text-[11px] text-slate-600 mt-1.5 text-center font-medium">{ocrMessage}</p>
+              )}
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-3">
+              {/* オドメーター入力 & 前回表示 */}
+              <div className="bg-emerald-50/60 p-3 rounded-xl border border-emerald-100">
+                <div className="flex items-center justify-between text-xs mb-1">
+                  <label className="font-bold text-slate-800">今回の走行距離 (オドメーター)</label>
+                  <span className="text-[11px] text-emerald-800 font-semibold font-mono">
+                    前回: {prevOdometer.toLocaleString()} km
+                  </span>
+                </div>
+                <div className="relative">
+                  <input
+                    type="number"
+                    placeholder={`例: ${prevOdometer + 450}`}
+                    value={form.odometer}
+                    onChange={e => setForm({ ...form, odometer: e.target.value })}
+                    className="w-full rounded-xl border border-slate-300 px-3 py-2 text-base font-bold number-font focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                    required
+                  />
+                  <span className="absolute right-3 top-2.5 text-xs text-slate-400 font-bold">km</span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">給油日</label>
+                  <input
+                    type="date"
+                    value={form.date}
+                    onChange={e => setForm({ ...form, date: e.target.value })}
+                    className="w-full rounded-xl border border-slate-300 px-3 py-2 text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">給油量 (L)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    placeholder="例: 32.50"
+                    value={form.fuel_amount}
+                    onChange={e => {
+                      const amt = e.target.value;
+                      setForm(prev => {
+                        const total = prev.total_amount ? parseInt(prev.total_amount, 10) : 0;
+                        const unit = amt > 0 && total > 0 ? Math.round(total / amt) : prev.unit_price;
+                        return { ...prev, fuel_amount: amt, unit_price: unit };
+                      });
+                    }}
+                    className="w-full rounded-xl border border-slate-300 px-3 py-2 text-xs font-bold focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">支払合計金額 (円)</label>
+                  <input
+                    type="number"
+                    placeholder="例: 5500"
+                    value={form.total_amount}
+                    onChange={e => {
+                      const total = e.target.value;
+                      setForm(prev => {
+                        const amt = prev.fuel_amount ? parseFloat(prev.fuel_amount) : 0;
+                        const unit = amt > 0 && total > 0 ? Math.round(total / amt) : prev.unit_price;
+                        return { ...prev, total_amount: total, unit_price: unit };
+                      });
+                    }}
+                    className="w-full rounded-xl border border-slate-300 px-3 py-2 text-xs font-bold focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">単価 (@円/L)</label>
+                  <input
+                    type="number"
+                    placeholder="例: 170"
+                    value={form.unit_price}
+                    onChange={e => setForm({ ...form, unit_price: e.target.value })}
+                    className="w-full rounded-xl border border-slate-300 px-3 py-2 text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              {/* 満タンチェック */}
+              <div className="flex items-center gap-2 p-2 bg-slate-50 rounded-xl border border-slate-100">
+                <input
+                  type="checkbox"
+                  id="modalFullTank"
+                  checked={form.is_full_tank}
+                  onChange={e => setForm({ ...form, is_full_tank: e.target.checked })}
+                  className="w-4 h-4 text-emerald-600 rounded focus:ring-emerald-500"
+                />
+                <label htmlFor="modalFullTank" className="text-xs font-bold text-slate-800">
+                  満タン給油（正確な燃費計算に使用）
+                </label>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">メモ・給油スタンド名</label>
+                <input
+                  type="text"
+                  placeholder="例: ENEOS、出光セルフなど"
+                  value={form.memo}
+                  onChange={e => setForm({ ...form, memo: e.target.value })}
+                  className="w-full rounded-xl border border-slate-300 px-3 py-2 text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                />
+              </div>
+
+              <div className="pt-2 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="px-4 py-2.5 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl"
+                >
+                  キャンセル
+                </button>
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="px-5 py-2.5 text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl shadow flex items-center gap-1.5"
+                >
+                  {submitting ? "保存中..." : "給油を記録する"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      );
+    }
+
+    // ==========================================
+    // 画面: 車両一覧タブ (車3台・バイク2台枠管理)
+    // ==========================================
+    function VehiclesTab({ vehicles, vehicleCounts, onAddNew, onDelete }) {
+      return (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-bold text-slate-900">登録車両・バイク一覧</h2>
+            <button
+              onClick={onAddNew}
+              disabled={!vehicleCounts.canAddAny}
+              className={`px-3 py-1.5 text-xs font-bold rounded-xl flex items-center gap-1 shadow transition ${
+                vehicleCounts.canAddAny
+                  ? "bg-emerald-600 hover:bg-emerald-500 text-white"
+                  : "bg-slate-300 text-slate-500 cursor-not-allowed"
+              }`}
+            >
+              <Icon name="plus" className="w-3.5 h-3.5" /> 車両を追加
+            </button>
+          </div>
+
+          {/* 登録スロット状況バナー */}
+          <div className="grid grid-cols-2 gap-2">
+            <div className={`p-3 rounded-2xl border ${vehicleCounts.car >= 3 ? "bg-slate-50 border-slate-200" : "bg-emerald-50/50 border-emerald-200"}`}>
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-700 flex items-center gap-1">
+                  <Icon name="car" className="w-4 h-4 text-emerald-600" />
+                  四輪車 (最大3台)
+                </span>
+                <span className={`text-xs font-bold number-font px-2 py-0.5 rounded-full ${vehicleCounts.car >= 3 ? "bg-slate-200 text-slate-600" : "bg-emerald-100 text-emerald-800"}`}>
+                  {vehicleCounts.car} / 3 台
+                </span>
+              </div>
+              <p className="text-[10px] text-slate-500 mt-1">
+                {vehicleCounts.car >= 3 ? "登録枠が満杯です" : `あと ${3 - vehicleCounts.car} 台登録可能`}
+              </p>
+            </div>
+
+            <div className={`p-3 rounded-2xl border ${vehicleCounts.bike >= 2 ? "bg-slate-50 border-slate-200" : "bg-blue-50/50 border-blue-200"}`}>
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-700 flex items-center gap-1">
+                  <Icon name="bike" className="w-4 h-4 text-blue-600" />
+                  バイク (最大2台)
+                </span>
+                <span className={`text-xs font-bold number-font px-2 py-0.5 rounded-full ${vehicleCounts.bike >= 2 ? "bg-slate-200 text-slate-600" : "bg-blue-100 text-blue-800"}`}>
+                  {vehicleCounts.bike} / 2 台
+                </span>
+              </div>
+              <p className="text-[10px] text-slate-500 mt-1">
+                {vehicleCounts.bike >= 2 ? "登録枠が満杯です" : `あと ${2 - vehicleCounts.bike} 台登録可能`}
+              </p>
+            </div>
+          </div>
+
+          {/* 車両リスト */}
+          <div className="space-y-3">
+            {vehicles.map(v => (
+              <div key={v.vehicle_id} className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className={`p-2.5 rounded-xl ${v.vehicle_type === "bike" ? "bg-blue-50 text-blue-600" : "bg-slate-100 text-slate-700"}`}>
+                    <Icon name={v.vehicle_type === "bike" ? "bike" : "car"} className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-1.5">
+                      <span className={`text-[9px] font-bold px-1.5 py-0.2 rounded ${v.vehicle_type === "bike" ? "bg-blue-100 text-blue-700" : "bg-emerald-100 text-emerald-700"}`}>
+                        {v.vehicle_type === "bike" ? "バイク" : "四輪車"}
+                      </span>
+                      <h3 className="font-bold text-sm text-slate-900">{v.vehicle_name}</h3>
+                    </div>
+                    <p className="text-xs text-slate-500 font-mono mt-0.5">{v.plate_number || "ナンバー未設定"}</p>
+                    <p className="text-[11px] text-emerald-600 font-bold mt-0.5 font-mono">
+                      現在: {Number(v.current_odometer).toLocaleString()} km
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => onDelete(v.vehicle_id)}
+                  className="p-2 text-slate-400 hover:text-rose-500 rounded-lg hover:bg-slate-50 transition"
+                  title="車両削除"
+                >
+                  <Icon name="trash" className="w-4 h-4" />
+                </button>
+              </div>
+            ))}
+
+            {vehicles.length === 0 && (
+              <div className="p-8 text-center text-xs text-slate-400 bg-white rounded-2xl border border-slate-200">
+                登録されている車両・バイクがありません。
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // ==========================================
+    // 画面: 管理者専用タブ
+    // ==========================================
+    function AdminTab({ callApi }) {
+      const [adminData, setAdminData] = useState(null);
+      const [loading, setLoading] = useState(false);
+      const [newUserId, setNewUserId] = useState("");
+      const [newUserName, setNewUserName] = useState("");
+      const [newInitialPass, setNewInitialPass] = useState("");
+
+      const loadAdminData = async () => {
+        setLoading(true);
+        try {
+          const res = await callApi("adminGetAllData");
+          setAdminData(res);
+        } catch (e) {
+          alert("管理者データ取得エラー: " + e.message);
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      useEffect(() => {
+        loadAdminData();
+      }, []);
+
+      const handleCreateUser = async (e) => {
+        e.preventDefault();
+        if (!newUserId || !newInitialPass) return alert("IDと初期パスワードを入力してください");
+        try {
+          await callApi("adminCreateUser", {
+            new_user_id: newUserId,
+            initial_password: newInitialPass,
+            user_name: newUserName
+          });
+          alert(`利用者 ${newUserId} を登録しました！`);
+          setNewUserId("");
+          setNewUserName("");
+          setNewInitialPass("");
+          loadAdminData();
+        } catch (e) {
+          alert(e.message);
+        }
+      };
+
+      const handleResetPassword = async (userId) => {
+        const pass = prompt(`利用者「${userId}」の初期化パスワードを入力してください:`, "pass1234");
+        if (!pass) return;
+        try {
+          const res = await callApi("adminResetPassword", {
+            target_user_id: userId,
+            initial_password: pass
+          });
+          alert(res.message);
+          loadAdminData();
+        } catch (e) {
+          alert(e.message);
+        }
+      };
+
+      return (
+        <div className="space-y-4">
+          <div className="bg-slate-900 text-white p-4 rounded-2xl shadow">
+            <h2 className="text-sm font-bold flex items-center gap-2">
+              <Icon name="shield" className="w-4 h-4 text-emerald-400" />
+              管理者画面 (小松)
+            </h2>
+            <p className="text-[11px] text-slate-300 mt-1">
+              全利用者のアカウント管理、初期パスワード発行、リセットを行えます。
+            </p>
+          </div>
+
+          {/* 新規利用者発行フォーム */}
+          <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
+            <h3 className="font-bold text-xs text-slate-900 mb-3">新しい利用者の発行</h3>
+            <form onSubmit={handleCreateUser} className="space-y-2.5">
+              <div className="grid grid-cols-2 gap-2">
+                <input
+                  type="text"
+                  placeholder="利用者ID (例: taro)"
+                  value={newUserId}
+                  onChange={e => setNewUserId(e.target.value)}
+                  className="rounded-xl border border-slate-300 px-3 py-1.5 text-xs focus:ring-1 focus:ring-emerald-500 focus:outline-none"
+                  required
+                />
+                <input
+                  type="text"
+                  placeholder="表示名 (例: 太郎)"
+                  value={newUserName}
+                  onChange={e => setNewUserName(e.target.value)}
+                  className="rounded-xl border border-slate-300 px-3 py-1.5 text-xs focus:ring-1 focus:ring-emerald-500 focus:outline-none"
+                />
+              </div>
+              <input
+                type="text"
+                placeholder="初期パスワード (例: start1234)"
+                value={newInitialPass}
+                onChange={e => setNewInitialPass(e.target.value)}
+                className="w-full rounded-xl border border-slate-300 px-3 py-1.5 text-xs focus:ring-1 focus:ring-emerald-500 focus:outline-none"
+                required
+              />
+              <button
+                type="submit"
+                className="w-full py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl shadow"
+              >
+                アカウントを発行する (初回パスワード変更必須)
+              </button>
+            </form>
+          </div>
+
+          {/* ユーザー一覧 */}
+          {adminData && (
+            <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
+              <div className="p-3 border-b border-slate-100 flex items-center justify-between">
+                <h3 className="font-bold text-xs text-slate-900">発行済み利用者一覧 ({adminData.users.length}名)</h3>
+                <button onClick={loadAdminData} className="text-[11px] text-emerald-600 font-bold">更新</button>
+              </div>
+              <div className="divide-y divide-slate-100">
+                {adminData.users.map(u => (
+                  <div key={u.user_id} className="p-3 flex items-center justify-between text-xs">
+                    <div>
+                      <div className="font-bold text-slate-800 flex items-center gap-1.5">
+                        {u.user_name} ({u.user_id})
+                        {u.is_admin && <span className="text-[9px] bg-slate-900 text-white px-1.5 rounded">管理者</span>}
+                        {u.must_change_password && <span className="text-[9px] bg-amber-100 text-amber-700 px-1.5 rounded">未初回変更</span>}
+                      </div>
+                      <div className="text-[10px] text-slate-400 mt-0.5">登録日: {u.created_at.substring(0, 10)}</div>
+                    </div>
+                    {!u.is_admin && (
+                      <button
+                        onClick={() => handleResetPassword(u.user_id)}
+                        className="px-2.5 py-1 bg-slate-100 hover:bg-rose-50 hover:text-rose-600 text-slate-600 rounded-lg text-[11px] font-bold transition"
+                      >
+                        パスワード初期化
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // ==========================================
+    // 画面: 設定タブ
+    // ==========================================
+    function SettingsTab({ auth, gasUrl, onSaveGasUrl, onChangePassword, onLogout }) {
+      const [urlInput, setUrlInput] = useState(gasUrl);
+
+      return (
+        <div className="space-y-4">
+          <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm space-y-3">
+            <h2 className="text-sm font-bold text-slate-900">アカウント設定</h2>
+            <div className="text-xs text-slate-600 space-y-1">
+              <div>利用者ID: <strong>{auth.user.user_id}</strong></div>
+              <div>お名前: <strong>{auth.user.user_name}</strong></div>
+            </div>
+            <button
+              onClick={onChangePassword}
+              className="w-full py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition"
+            >
+              ログインパスワードを変更する
+            </button>
+          </div>
+
+          {/* 管理者ドライブへの保存告知 */}
+          <div className="bg-amber-50 rounded-2xl border border-amber-200 p-4 text-xs text-amber-900 space-y-1.5">
+            <div className="flex items-center gap-1.5 font-bold">
+              <Icon name="shield" className="w-4 h-4 text-amber-600" />
+              データの保存先について
+            </div>
+            <p className="text-[11px] leading-relaxed text-amber-800">
+              本アプリに入力された給油データおよびレシート写真は、管理者（小松）のGoogleドライブ（スプレッドシート）に安全に保存されます。利用者IDごとにデータが区切られており、他の利用者から閲覧されることはありません。
+            </p>
+          </div>
+
+          {/* GAS Web App URL設定 */}
+          <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm space-y-2">
+            <h3 className="font-bold text-xs text-slate-900">接続先Apps Script URL</h3>
+            <p className="text-[11px] text-slate-400">デプロイしたGoogle Apps ScriptのウェブアプリURLです</p>
+            <input
+              type="text"
+              value={urlInput}
+              onChange={e => setUrlInput(e.target.value)}
+              placeholder="https://script.google.com/macros/s/.../exec"
+              className="w-full rounded-xl border border-slate-300 px-3 py-2 text-xs font-mono focus:ring-1 focus:ring-emerald-500 focus:outline-none"
+            />
+            <button
+              onClick={() => onSaveGasUrl(urlInput)}
+              className="w-full py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl shadow"
+            >
+              URLを更新・保存
+            </button>
+          </div>
+
+          <button
+            onClick={onLogout}
+            className="w-full py-3 bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-bold rounded-2xl border border-rose-200 transition"
+          >
+            ログアウト
+          </button>
+        </div>
+      );
+    }
+
+    // ==========================================
+    // 画面: ログインビュー
+    // ==========================================
+    function LoginView({ gasUrl, onSaveGasUrl, onLoginSuccess }) {
+      const [userId, setUserId] = useState("");
+      const [password, setPassword] = useState("");
+      const [url, setUrl] = useState(gasUrl || DEFAULT_GAS_URL);
+      const [loading, setLoading] = useState(false);
+
+      const handleLogin = async (e) => {
+        e.preventDefault();
+        if (!url) return alert("Apps ScriptのウェブアプリURLを設定してください。");
+        if (!userId || !password) return alert("利用者IDとパスワードを入力してください。");
+
+        setLoading(true);
+        try {
+          const res = await fetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "text/plain;charset=utf-8" },
+            body: JSON.stringify({
+              action: "login",
+              user_id: userId,
+              password: password
+            })
+          });
+          const json = await res.json();
+          if (json.success) {
+            onSaveGasUrl(url);
+            onLoginSuccess(json);
+          } else {
+            alert(json.error || "ログインに失敗しました。");
+          }
+        } catch (err) {
+          alert("通信エラー: " + err.message);
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      return (
+        <div className="min-h-screen bg-slate-900 text-white flex flex-col justify-center px-4 py-8">
+          <div className="max-w-sm w-full mx-auto space-y-6">
+            <div className="text-center space-y-2">
+              <div className="w-14 h-14 bg-emerald-500 text-slate-950 rounded-2xl mx-auto flex items-center justify-center shadow-lg shadow-emerald-500/30">
+                <Icon name="fuel" className="w-8 h-8" />
+              </div>
+              <h1 className="text-2xl font-bold tracking-tight">モビログ</h1>
+              <p className="text-xs text-slate-400">車両給油・メンテナンス管理（身内共有版）</p>
+            </div>
+
+            <form onSubmit={handleLogin} className="bg-slate-800 rounded-2xl p-5 border border-slate-700 space-y-3.5 shadow-xl">
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">利用者ID</label>
+                <input
+                  type="text"
+                  placeholder="管理者から共有されたID"
+                  value={userId}
+                  onChange={e => setUserId(e.target.value)}
+                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">パスワード</label>
+                <input
+                  type="password"
+                  placeholder="パスワード"
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  required
+                />
+              </div>
+
+              <div className="pt-1">
+                <details className="text-[11px] text-slate-400">
+                  <summary className="cursor-pointer hover:text-slate-300 font-semibold mb-1">接続設定 (GAS URL)</summary>
+                  <input
+                    type="text"
+                    placeholder="https://script.google.com/macros/s/.../exec"
+                    value={url}
+                    onChange={e => setUrl(e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-1.5 text-xs text-slate-300 font-mono mt-1"
+                  />
+                </details>
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-sm rounded-xl shadow-lg transition"
+              >
+                {loading ? "ログイン中..." : "ログイン"}
+              </button>
+            </form>
+
+            <div className="bg-slate-800/60 p-3 rounded-xl border border-slate-700/60 text-center text-[11px] text-slate-400">
+              ※本アプリの給油記録・写真は、管理者（小松）のGoogleドライブに安全に保管されます。
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // ==========================================
+    // モーダル: 車両追加 (四輪車/バイク種別選択)
+    // ==========================================
+    function AddVehicleModal({ vehicleCounts, callApi, onClose, onSuccess }) {
+      // 初期選択は空きのある種別を優先
+      const [type, setType] = useState(() => {
+        if (vehicleCounts.canAddCar) return "car";
+        if (vehicleCounts.canAddBike) return "bike";
+        return "car";
+      });
+      const [name, setName] = useState("");
+      const [plate, setPlate] = useState("");
+      const [odo, setOdo] = useState("");
+      const [submitting, setSubmitting] = useState(false);
+
+      const handleSubmit = async (e) => {
+        e.preventDefault();
+        if (!name) return alert("車種名・モデル名を入力してください。");
+        if (type === "car" && !vehicleCounts.canAddCar) {
+          return alert("四輪車の登録上限（3台）に達しています。");
+        }
+        if (type === "bike" && !vehicleCounts.canAddBike) {
+          return alert("バイクの登録上限（2台）に達しています。");
+        }
+
+        setSubmitting(true);
+        try {
+          await callApi("saveVehicle", {
+            vehicle: {
+              vehicle_type: type,
+              vehicle_name: name,
+              plate_number: plate,
+              current_odometer: parseInt(odo, 10) || 0
+            }
+          });
+          onSuccess();
+        } catch (err) {
+          alert("登録エラー: " + err.message);
+        } finally {
+          setSubmitting(false);
+        }
+      };
+
+      return (
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl w-full max-w-sm p-5 shadow-2xl border border-slate-100">
+            <h3 className="font-bold text-sm text-slate-900 mb-3">新しい車両・バイクの登録</h3>
+            
+            <form onSubmit={handleSubmit} className="space-y-3">
+              {/* 種別トグル */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1.5">種別を選択</label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    disabled={!vehicleCounts.canAddCar}
+                    onClick={() => setType("car")}
+                    className={`p-2.5 rounded-xl border text-left flex flex-col justify-between transition ${
+                      type === "car"
+                        ? "border-emerald-500 bg-emerald-50 text-emerald-900 ring-2 ring-emerald-500/20"
+                        : vehicleCounts.canAddCar
+                        ? "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+                        : "border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed opacity-60"
+                    }`}
+                  >
+                    <div className="flex items-center gap-1.5 font-bold text-xs">
+                      <Icon name="car" className="w-4 h-4" /> 四輪車
+                    </div>
+                    <span className="text-[10px] mt-1 text-slate-500">
+                      {vehicleCounts.canAddCar ? `（残 ${3 - vehicleCounts.car} 台）` : "満杯 (3台)"}
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={!vehicleCounts.canAddBike}
+                    onClick={() => setType("bike")}
+                    className={`p-2.5 rounded-xl border text-left flex flex-col justify-between transition ${
+                      type === "bike"
+                        ? "border-blue-500 bg-blue-50 text-blue-900 ring-2 ring-blue-500/20"
+                        : vehicleCounts.canAddBike
+                        ? "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+                        : "border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed opacity-60"
+                    }`}
+                  >
+                    <div className="flex items-center gap-1.5 font-bold text-xs">
+                      <Icon name="bike" className="w-4 h-4" /> バイク
+                    </div>
+                    <span className="text-[10px] mt-1 text-slate-500">
+                      {vehicleCounts.canAddBike ? `（残 ${2 - vehicleCounts.bike} 台）` : "満杯 (2台)"}
+                    </span>
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  {type === "bike" ? "バイク名・モデル名" : "車種名・グレード"}
+                </label>
+                <input
+                  type="text"
+                  placeholder={type === "bike" ? "例: スーパーカブ110、レブル250" : "例: ヤリスクロス、プリウス"}
+                  value={name}
+                  onChange={e => setName(e.target.value)}
+                  className="w-full rounded-xl border border-slate-300 px-3 py-2 text-xs focus:ring-1 focus:ring-emerald-500 focus:outline-none"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">ナンバープレート</label>
+                <input
+                  type="text"
+                  placeholder={type === "bike" ? "例: 品川 C あ 12-34 (市区町村番号可)" : "例: 品川 500 あ 12-34"}
+                  value={plate}
+                  onChange={e => setPlate(e.target.value)}
+                  className="w-full rounded-xl border border-slate-300 px-3 py-2 text-xs focus:ring-1 focus:ring-emerald-500 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">現在の走行距離 (km)</label>
+                <input
+                  type="number"
+                  placeholder="例: 8500"
+                  value={odo}
+                  onChange={e => setOdo(e.target.value)}
+                  className="w-full rounded-xl border border-slate-300 px-3 py-2 text-xs focus:ring-1 focus:ring-emerald-500 focus:outline-none"
+                  required
+                />
+              </div>
+
+              <div className="pt-2 flex justify-end gap-2">
+                <button type="button" onClick={onClose} className="px-3 py-2 text-xs font-bold text-slate-600">キャンセル</button>
+                <button type="submit" disabled={submitting} className="px-4 py-2 bg-emerald-600 text-white text-xs font-bold rounded-xl shadow">登録する</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      );
+    }
+
+    // ==========================================
+    // モーダル: パスワード変更
+    // ==========================================
+    function ChangePasswordModal({ user, isMandatory, callApi, onSuccess, onClose }) {
+      const [oldPass, setOldPass] = useState("");
+      const [newPass, setNewPass] = useState("");
+      const [submitting, setSubmitting] = useState(false);
+
+      const handleSubmit = async (e) => {
+        e.preventDefault();
+        if (newPass.length < 6) return alert("新しいパスワードは6文字以上で入力してください。");
+        setSubmitting(true);
+        try {
+          const res = await callApi("changePassword", {
+            user_id: user.user_id,
+            old_password: oldPass,
+            new_password: newPass
+          });
+          onSuccess(res.token, res.user);
+        } catch (err) {
+          alert("パスワード変更失敗: " + err.message);
+        } finally {
+          setSubmitting(false);
+        }
+      };
+
+      return (
+        <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl w-full max-w-sm p-5 shadow-2xl border border-slate-100">
+            <h3 className="font-bold text-sm text-slate-900 mb-1">
+              {isMandatory ? "初回パスワード変更（必須）" : "パスワードの変更"}
+            </h3>
+            <p className="text-[11px] text-slate-500 mb-3">
+              {isMandatory ? "セキュリティのため、初期パスワードをご自身だけのパスワードに変更してください。" : "新しいパスワードを設定します。"}
+            </p>
+
+            <form onSubmit={handleSubmit} className="space-y-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">現在のパスワード</label>
+                <input
+                  type="password"
+                  placeholder="現在のパスワード"
+                  value={oldPass}
+                  onChange={e => setOldPass(e.target.value)}
+                  className="w-full rounded-xl border border-slate-300 px-3 py-2 text-xs focus:ring-1 focus:ring-emerald-500 focus:outline-none"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">新しいパスワード (6文字以上)</label>
+                <input
+                  type="password"
+                  placeholder="新しいパスワード"
+                  value={newPass}
+                  onChange={e => setNewPass(e.target.value)}
+                  className="w-full rounded-xl border border-slate-300 px-3 py-2 text-xs focus:ring-1 focus:ring-emerald-500 focus:outline-none"
+                  required
+                />
+              </div>
+
+              <div className="pt-2 flex justify-end gap-2">
+                {!isMandatory && (
+                  <button type="button" onClick={onClose} className="px-3 py-2 text-xs font-bold text-slate-600">キャンセル</button>
+                )}
+                <button type="submit" disabled={submitting} className="w-full py-2 bg-emerald-600 text-white text-xs font-bold rounded-xl shadow">
+                  パスワードを変更する
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>
