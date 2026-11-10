@@ -48,6 +48,8 @@
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
   <style>
+    /* 文字を全体に大きく（2026-11-10 本人の希望）。数字を変えると全体の大きさが変わる */
+    html { font-size: 118.75%; }
     /* iOSセーフエリア対応 (ノッチ・ホームバー) */
     body {
       padding-top: env(safe-area-inset-top);
@@ -247,8 +249,8 @@
                   <Icon name="fuel" className="w-5 h-5" />
                 </div>
                 <div>
-                  <h1 className="text-base font-bold tracking-tight">モビログ <span className="text-[10px] text-emerald-400 bg-emerald-950 px-2 py-0.5 rounded-full border border-emerald-800">身内共有版</span></h1>
-                  <p className="text-[11px] text-slate-400">{auth.user.user_name} さん ({auth.user.user_id})</p>
+                  <h1 className="text-base font-bold tracking-tight">モビログ <span className="text-[12px] text-emerald-400 bg-emerald-950 px-2 py-0.5 rounded-full border border-emerald-800">身内共有版</span></h1>
+                  <p className="text-[13px] text-slate-400">{auth.user.user_name} さん ({auth.user.user_id})</p>
                 </div>
               </div>
 
@@ -372,14 +374,14 @@
           <nav className="fixed bottom-0 left-0 right-0 max-w-lg mx-auto bg-white/95 backdrop-blur border-t border-slate-200 z-30 flex justify-around items-center py-2 px-1">
             <button
               onClick={() => setTab("fuel")}
-              className={`flex flex-col items-center gap-1 text-[10px] font-bold py-1 px-3 rounded-lg transition ${tab === "fuel" ? "text-emerald-600" : "text-slate-400"}`}
+              className={`flex flex-col items-center gap-1 text-[12px] font-bold py-1 px-3 rounded-lg transition ${tab === "fuel" ? "text-emerald-600" : "text-slate-400"}`}
             >
               <Icon name="fuel" className="w-5 h-5" />
               給油記録
             </button>
             <button
               onClick={() => setTab("vehicles")}
-              className={`flex flex-col items-center gap-1 text-[10px] font-bold py-1 px-3 rounded-lg transition ${tab === "vehicles" ? "text-emerald-600" : "text-slate-400"}`}
+              className={`flex flex-col items-center gap-1 text-[12px] font-bold py-1 px-3 rounded-lg transition ${tab === "vehicles" ? "text-emerald-600" : "text-slate-400"}`}
             >
               <Icon name="car" className="w-5 h-5" />
               登録車両
@@ -387,7 +389,7 @@
             {auth.user.is_admin && (
               <button
                 onClick={() => setTab("admin")}
-                className={`flex flex-col items-center gap-1 text-[10px] font-bold py-1 px-3 rounded-lg transition ${tab === "admin" ? "text-emerald-600" : "text-slate-400"}`}
+                className={`flex flex-col items-center gap-1 text-[12px] font-bold py-1 px-3 rounded-lg transition ${tab === "admin" ? "text-emerald-600" : "text-slate-400"}`}
               >
                 <Icon name="shield" className="w-5 h-5" />
                 管理者
@@ -395,7 +397,7 @@
             )}
             <button
               onClick={() => setTab("settings")}
-              className={`flex flex-col items-center gap-1 text-[10px] font-bold py-1 px-3 rounded-lg transition ${tab === "settings" ? "text-emerald-600" : "text-slate-400"}`}
+              className={`flex flex-col items-center gap-1 text-[12px] font-bold py-1 px-3 rounded-lg transition ${tab === "settings" ? "text-emerald-600" : "text-slate-400"}`}
             >
               <Icon name="settings" className="w-5 h-5" />
               設定
@@ -491,33 +493,33 @@
               <span className="flex items-center gap-1.5 font-bold text-slate-200">
                 <Icon name={vehicle.vehicle_type === "bike" ? "bike" : "car"} className="w-4 h-4 text-emerald-400" />
                 {vehicle.vehicle_name}
-                <span className="text-[10px] text-slate-400 font-normal">({vehicle.vehicle_type === "bike" ? "バイク" : "四輪車"})</span>
+                <span className="text-[12px] text-slate-400 font-normal">({vehicle.vehicle_type === "bike" ? "バイク" : "四輪車"})</span>
               </span>
-              <span className="font-mono bg-slate-800 px-2 py-0.5 rounded text-[11px] text-slate-300">
+              <span className="font-mono bg-slate-800 px-2 py-0.5 rounded text-[13px] text-slate-300">
                 最新: {Number(vehicle.current_odometer).toLocaleString()} km
               </span>
             </div>
 
             <div className="grid grid-cols-3 gap-2 text-center">
               <div>
-                <span className="text-[10px] text-slate-400 uppercase font-semibold block">通算平均燃費</span>
+                <span className="text-[12px] text-slate-400 uppercase font-semibold block">通算平均燃費</span>
                 <div className="text-xl font-bold number-font text-emerald-400 mt-0.5">
                   {summary?.avgEconomy ? `${summary.avgEconomy}` : "--"}
-                  <span className="text-[10px] text-slate-400 font-normal ml-0.5">km/L</span>
+                  <span className="text-[12px] text-slate-400 font-normal ml-0.5">km/L</span>
                 </div>
               </div>
               <div>
-                <span className="text-[10px] text-slate-400 uppercase font-semibold block">直近燃費</span>
+                <span className="text-[12px] text-slate-400 uppercase font-semibold block">直近燃費</span>
                 <div className="text-xl font-bold number-font text-white mt-0.5">
                   {summary?.latestEconomy ? `${summary.latestEconomy}` : "--"}
-                  <span className="text-[10px] text-slate-400 font-normal ml-0.5">km/L</span>
+                  <span className="text-[12px] text-slate-400 font-normal ml-0.5">km/L</span>
                 </div>
               </div>
               <div>
-                <span className="text-[10px] text-slate-400 uppercase font-semibold block">1kmガソリン代</span>
+                <span className="text-[12px] text-slate-400 uppercase font-semibold block">1kmガソリン代</span>
                 <div className="text-xl font-bold number-font text-amber-300 mt-0.5">
                   {summary?.avgCostPerKm ? `¥${summary.avgCostPerKm}` : "--"}
-                  <span className="text-[10px] text-slate-400 font-normal ml-0.5">/km</span>
+                  <span className="text-[12px] text-slate-400 font-normal ml-0.5">/km</span>
                 </div>
               </div>
             </div>
@@ -525,10 +527,10 @@
             {/* 月別合計表示 */}
             {summary?.monthly && Object.keys(summary.monthly).length > 0 && (
               <div className="mt-3 pt-3 border-t border-slate-700/60 flex items-center justify-between text-xs text-slate-300">
-                <span className="text-slate-400 text-[11px]">今月の給油合計:</span>
+                <span className="text-slate-400 text-[13px]">今月の給油合計:</span>
                 <span className="font-bold number-font text-emerald-400">
                   ¥{Number(Object.values(summary.monthly)[Object.values(summary.monthly).length - 1]?.cost || 0).toLocaleString()}
-                  <span className="text-[10px] text-slate-400 font-normal ml-1">
+                  <span className="text-[12px] text-slate-400 font-normal ml-1">
                     ({Object.values(summary.monthly)[Object.values(summary.monthly).length - 1]?.fuel || 0} L)
                   </span>
                 </span>
@@ -549,7 +551,7 @@
           <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
             <div className="p-3 border-b border-slate-100 flex items-center justify-between">
               <h3 className="font-bold text-xs text-slate-700">給油履歴一覧 ({records.length}件)</h3>
-              <span className="text-[10px] text-slate-400">※満タン法で燃費を自動計算</span>
+              <span className="text-[12px] text-slate-400">※満タン法で燃費を自動計算</span>
             </div>
 
             <div className="divide-y divide-slate-100">
@@ -560,9 +562,9 @@
                       <div className="flex items-center gap-2">
                         <span className="font-bold text-sm text-slate-900">{rec.date}</span>
                         {rec.is_full_tank ? (
-                          <span className="text-[9px] bg-emerald-100 text-emerald-700 font-bold px-1.5 py-0.2 rounded">満タン</span>
+                          <span className="text-[11px] bg-emerald-100 text-emerald-700 font-bold px-1.5 py-0.2 rounded">満タン</span>
                         ) : (
-                          <span className="text-[9px] bg-amber-100 text-amber-700 font-bold px-1.5 py-0.2 rounded">途中給油</span>
+                          <span className="text-[11px] bg-amber-100 text-amber-700 font-bold px-1.5 py-0.2 rounded">途中給油</span>
                         )}
                       </div>
                       <div className="text-xs text-slate-500 mt-0.5">
@@ -589,12 +591,12 @@
                       {rec.fuel_economy ? (
                         <span className="font-bold text-emerald-600 number-font text-sm">
                           {rec.fuel_economy} km/L
-                          <span className="text-[10px] text-slate-400 font-normal ml-1.5 font-mono">
+                          <span className="text-[12px] text-slate-400 font-normal ml-1.5 font-mono">
                             (¥{rec.cost_per_km}/km)
                           </span>
                         </span>
                       ) : (
-                        <span className="text-[11px] text-slate-400 italic">
+                        <span className="text-[13px] text-slate-400 italic">
                           {rec.is_full_tank ? "初回満タン (次回から燃費表示)" : "次回満タン時にまとめて計算"}
                         </span>
                       )}
@@ -604,7 +606,7 @@
                       {rec.receipt_file_url && (
                         <button
                           onClick={() => onPreviewReceipt(rec.receipt_file_url)}
-                          className="text-[11px] font-semibold text-blue-600 hover:underline flex items-center gap-0.5"
+                          className="text-[13px] font-semibold text-blue-600 hover:underline flex items-center gap-0.5"
                         >
                           <Icon name="image" className="w-3.5 h-3.5" /> レシート
                         </button>
@@ -620,7 +622,7 @@
                   </div>
 
                   {rec.memo && (
-                    <div className="mt-1 text-[11px] text-slate-500 bg-slate-50 px-2 py-1 rounded">
+                    <div className="mt-1 text-[13px] text-slate-500 bg-slate-50 px-2 py-1 rounded">
                       {rec.memo}
                     </div>
                   )}
@@ -776,7 +778,7 @@
                 {ocrLoading ? "OCR解析中..." : "レシート写真を撮影して自動入力"}
               </button>
               {ocrMessage && (
-                <p className="text-[11px] text-slate-600 mt-1.5 text-center font-medium">{ocrMessage}</p>
+                <p className="text-[13px] text-slate-600 mt-1.5 text-center font-medium">{ocrMessage}</p>
               )}
             </div>
 
@@ -785,7 +787,7 @@
               <div className="bg-emerald-50/60 p-3 rounded-xl border border-emerald-100">
                 <div className="flex items-center justify-between text-xs mb-1">
                   <label className="font-bold text-slate-800">今回の走行距離 (オドメーター)</label>
-                  <span className="text-[11px] text-emerald-800 font-semibold font-mono">
+                  <span className="text-[13px] text-emerald-800 font-semibold font-mono">
                     前回: {prevOdometer.toLocaleString()} km
                   </span>
                 </div>
@@ -945,7 +947,7 @@
                   {vehicleCounts.car} / 3 台
                 </span>
               </div>
-              <p className="text-[10px] text-slate-500 mt-1">
+              <p className="text-[12px] text-slate-500 mt-1">
                 {vehicleCounts.car >= 3 ? "登録枠が満杯です" : `あと ${3 - vehicleCounts.car} 台登録可能`}
               </p>
             </div>
@@ -960,7 +962,7 @@
                   {vehicleCounts.bike} / 2 台
                 </span>
               </div>
-              <p className="text-[10px] text-slate-500 mt-1">
+              <p className="text-[12px] text-slate-500 mt-1">
                 {vehicleCounts.bike >= 2 ? "登録枠が満杯です" : `あと ${2 - vehicleCounts.bike} 台登録可能`}
               </p>
             </div>
@@ -976,13 +978,13 @@
                   </div>
                   <div>
                     <div className="flex items-center gap-1.5">
-                      <span className={`text-[9px] font-bold px-1.5 py-0.2 rounded ${v.vehicle_type === "bike" ? "bg-blue-100 text-blue-700" : "bg-emerald-100 text-emerald-700"}`}>
+                      <span className={`text-[11px] font-bold px-1.5 py-0.2 rounded ${v.vehicle_type === "bike" ? "bg-blue-100 text-blue-700" : "bg-emerald-100 text-emerald-700"}`}>
                         {v.vehicle_type === "bike" ? "バイク" : "四輪車"}
                       </span>
                       <h3 className="font-bold text-sm text-slate-900">{v.vehicle_name}</h3>
                     </div>
                     <p className="text-xs text-slate-500 font-mono mt-0.5">{v.plate_number || "ナンバー未設定"}</p>
-                    <p className="text-[11px] text-emerald-600 font-bold mt-0.5 font-mono">
+                    <p className="text-[13px] text-emerald-600 font-bold mt-0.5 font-mono">
                       現在: {Number(v.current_odometer).toLocaleString()} km
                     </p>
                   </div>
@@ -1075,7 +1077,7 @@
               <Icon name="shield" className="w-4 h-4 text-emerald-400" />
               管理者画面 (小松)
             </h2>
-            <p className="text-[11px] text-slate-300 mt-1">
+            <p className="text-[13px] text-slate-300 mt-1">
               全利用者のアカウント管理、初期パスワード発行、リセットを行えます。
             </p>
           </div>
@@ -1123,7 +1125,7 @@
             <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
               <div className="p-3 border-b border-slate-100 flex items-center justify-between">
                 <h3 className="font-bold text-xs text-slate-900">発行済み利用者一覧 ({adminData.users.length}名)</h3>
-                <button onClick={loadAdminData} className="text-[11px] text-emerald-600 font-bold">更新</button>
+                <button onClick={loadAdminData} className="text-[13px] text-emerald-600 font-bold">更新</button>
               </div>
               <div className="divide-y divide-slate-100">
                 {adminData.users.map(u => (
@@ -1131,15 +1133,15 @@
                     <div>
                       <div className="font-bold text-slate-800 flex items-center gap-1.5">
                         {u.user_name} ({u.user_id})
-                        {u.is_admin && <span className="text-[9px] bg-slate-900 text-white px-1.5 rounded">管理者</span>}
-                        {u.must_change_password && <span className="text-[9px] bg-amber-100 text-amber-700 px-1.5 rounded">未初回変更</span>}
+                        {u.is_admin && <span className="text-[11px] bg-slate-900 text-white px-1.5 rounded">管理者</span>}
+                        {u.must_change_password && <span className="text-[11px] bg-amber-100 text-amber-700 px-1.5 rounded">未初回変更</span>}
                       </div>
-                      <div className="text-[10px] text-slate-400 mt-0.5">登録日: {u.created_at.substring(0, 10)}</div>
+                      <div className="text-[12px] text-slate-400 mt-0.5">登録日: {u.created_at.substring(0, 10)}</div>
                     </div>
                     {!u.is_admin && (
                       <button
                         onClick={() => handleResetPassword(u.user_id)}
-                        className="px-2.5 py-1 bg-slate-100 hover:bg-rose-50 hover:text-rose-600 text-slate-600 rounded-lg text-[11px] font-bold transition"
+                        className="px-2.5 py-1 bg-slate-100 hover:bg-rose-50 hover:text-rose-600 text-slate-600 rounded-lg text-[13px] font-bold transition"
                       >
                         パスワード初期化
                       </button>
@@ -1181,7 +1183,7 @@
               <Icon name="shield" className="w-4 h-4 text-amber-600" />
               データの保存先について
             </div>
-            <p className="text-[11px] leading-relaxed text-amber-800">
+            <p className="text-[13px] leading-relaxed text-amber-800">
               本アプリに入力された給油データおよびレシート写真は、管理者（小松）のGoogleドライブ（スプレッドシート）に安全に保存されます。利用者IDごとにデータが区切られており、他の利用者から閲覧されることはありません。
             </p>
           </div>
@@ -1189,7 +1191,7 @@
           {/* GAS Web App URL設定 */}
           <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm space-y-2">
             <h3 className="font-bold text-xs text-slate-900">接続先Apps Script URL</h3>
-            <p className="text-[11px] text-slate-400">デプロイしたGoogle Apps ScriptのウェブアプリURLです</p>
+            <p className="text-[13px] text-slate-400">デプロイしたGoogle Apps ScriptのウェブアプリURLです</p>
             <input
               type="text"
               value={urlInput}
@@ -1291,7 +1293,7 @@
               </div>
 
               <div className="pt-1">
-                <details className="text-[11px] text-slate-400">
+                <details className="text-[13px] text-slate-400">
                   <summary className="cursor-pointer hover:text-slate-300 font-semibold mb-1">接続設定 (GAS URL)</summary>
                   <input
                     type="text"
@@ -1312,7 +1314,7 @@
               </button>
             </form>
 
-            <div className="bg-slate-800/60 p-3 rounded-xl border border-slate-700/60 text-center text-[11px] text-slate-400">
+            <div className="bg-slate-800/60 p-3 rounded-xl border border-slate-700/60 text-center text-[13px] text-slate-400">
               ※本アプリの給油記録・写真は、管理者（小松）のGoogleドライブに安全に保管されます。
             </div>
           </div>
@@ -1388,7 +1390,7 @@
                     <div className="flex items-center gap-1.5 font-bold text-xs">
                       <Icon name="car" className="w-4 h-4" /> 四輪車
                     </div>
-                    <span className="text-[10px] mt-1 text-slate-500">
+                    <span className="text-[12px] mt-1 text-slate-500">
                       {vehicleCounts.canAddCar ? `（残 ${3 - vehicleCounts.car} 台）` : "満杯 (3台)"}
                     </span>
                   </button>
@@ -1408,7 +1410,7 @@
                     <div className="flex items-center gap-1.5 font-bold text-xs">
                       <Icon name="bike" className="w-4 h-4" /> バイク
                     </div>
-                    <span className="text-[10px] mt-1 text-slate-500">
+                    <span className="text-[12px] mt-1 text-slate-500">
                       {vehicleCounts.canAddBike ? `（残 ${2 - vehicleCounts.bike} 台）` : "満杯 (2台)"}
                     </span>
                   </button>
@@ -1494,7 +1496,7 @@
             <h3 className="font-bold text-sm text-slate-900 mb-1">
               {isMandatory ? "初回パスワード変更（必須）" : "パスワードの変更"}
             </h3>
-            <p className="text-[11px] text-slate-500 mb-3">
+            <p className="text-[13px] text-slate-500 mb-3">
               {isMandatory ? "セキュリティのため、初期パスワードをご自身だけのパスワードに変更してください。" : "新しいパスワードを設定します。"}
             </p>
 
